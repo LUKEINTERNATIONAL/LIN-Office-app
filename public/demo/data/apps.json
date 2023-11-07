@@ -1,0 +1,21 @@
+{
+    "data": [
+        [
+            {"id": "0","name": "Timesheet","description": "Timesheet should be filled in time","image": "scheduling.png", "url": "/nav/timesheet_home"},
+            {"id": "1","name": "Inventory","description": "Shows the number of items in stock","image": "inventory.png", "url": "/nav/dashboard"}
+        ],
+        [
+            {"id": "2","name": "Requsition","description": "Allows Employs to request for items ","image": "requisition.png", "url": "/nav/dashboard"},
+            {"id": "3","name": "Employee Management","description": "Allows Employs to request for items ","image": "teamwork.png", "url": "/nav/dashboard"}
+        ],
+        [
+            {"id": "4","name": "HIS Technicals","description": "Allows Employs to request for items ","image": "service.png", "url": "/nav/dashboard"},
+            {"id": "5","name": "Fleet Management","description": "Allows Employs to request for items ","image": "fleet-management.png", "url": "/nav/dashboard"}
+        ],
+        [
+            {"id": "6","name": "Holidays","description": "Allows Employs to request for holidays ","image": "holiday-calendar.png", "url": "/nav/dashboard"},
+            {"id": "7","name": "Traning Management","description": "Allows Employs to manage tranings ","image": "presentation.png", "url": "/nav/dashboard"}
+        ]
+    ]
+}
+    
