@@ -12,16 +12,16 @@ export default [
     {
         label: 'Admin',
         items: [
-            { label: 'Manage Timesheet', icon: 'pi pi-file', to: '/blocks', badge: 'NEW' },
-            { label: 'Manage Users', icon: 'pi pi-users', url: 'https://www.primefaces.org/primeflex/', target: '_blank' },
-            { label: 'Manage Projects', icon: 'pi pi-box', to: '/utilities/icons' },
-            { label: 'Set Date Line', icon: 'pi pi-chevron-circle-down', url: 'https://www.primefaces.org/primeflex/', target: '_blank' },
+            { label: 'Manage Timesheet', icon: 'pi pi-file', to: '/nav/timesheet_admin', badge: 'NEW' },
+            { label: 'Manage Users', icon: 'pi pi-users', to: '/nav/manage_users'  },
+            { label: 'Manage Projects', icon: 'pi pi-box', to: '/nav/manage_projects' },
+            { label: 'Timesheet Configurations', icon: 'pi pi-chevron-circle-down', to: '/nav/timesheet_conf'},
         ]
     },
     {
         label: 'Settings',
         items: [
-            { label: 'Manage Account', icon: 'pi pi-users', url: 'https://www.primefaces.org/primeflex/', target: '_blank' },
+            { label: 'Manage Account', icon: 'pi pi-users', to: '/nav/manage_account' },
         ]
     }
 ]

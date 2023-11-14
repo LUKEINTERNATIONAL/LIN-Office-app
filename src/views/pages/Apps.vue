@@ -1,10 +1,10 @@
 <script setup>
-import AppService from '@/service/AppService';
+import { AppService } from '@/service/AppService';
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
-const products = ref([]);
+const apps = ref([]);
 const galleriaResponsiveOptions = ref([
     {
         breakpoint: '1024px',
@@ -41,10 +41,9 @@ const carouselResponsiveOptions = ref([
     }
 ]);
 
-const appService = new AppService();
-
-onMounted(() => {
-    appService.getApps().then((data) => (products.value = data));
+onMounted( async () => {
+    let data = await AppService.getData('apps/list')
+    apps.value = AppService.groupApps(data.apps)
 });
 
 const setActiveApp = (app,url) => {
@@ -58,36 +57,38 @@ const setActiveApp = (app,url) => {
         <div class="col-12">
             <div class="card">
                 <h3>LIN office Apps</h3>
-                <Carousel :value="products" :numVisible="3" :numScroll="3" :circular="true" :responsiveOptions="carouselResponsiveOptions">
+                <Carousel :value="apps" :numVisible="3" :numScroll="3" :circular="true" :responsiveOptions="carouselResponsiveOptions">
                     <template #item="product">
-                        <div class="border-round m-2 text-center p-2 " style="border: 1px solid var(--surface-d)" @click="setActiveApp(product.data[0].name,product.data[0].url)">
+                        <div class="border-round m-2 text-center p-2 " style="border: 1px solid var(--surface-d)" @click="setActiveApp(product.data?.[0].app_name,product.data?.[0].url)">
                             <div class="my-5">
-                                <img :src="'images/apps/' + product.data[0].image" :alt="product.data[0].name" class="product-image" />
+                                <img :src="'images/apps/' + product.data?.[0].icon_path" :alt="product.data?.[0].app_name" class="product-image" />
                             </div>
                             <div>
                                 <h4 class="mb-1">
-                                    {{ product.data[0].name }}
+                                    {{ product.data?.[0].app_name }}
                                 </h4>
-                                <h6 class="mt-0 mb-3">{{ product.data[0].description }}</h6>
+                                <h6 class="mt-0 mb-3">{{ product.data?.[0].description }}</h6>
                                 <div class="my-5">
                                     
                                 </div>
                             </div>
                         </div>
-                        <div class="border-round m-2 text-center p-2 " style="border: 1px solid var(--surface-d)" @click="setActiveApp(product.data[0].name,product.data[0].url)">
+
+                        <div v-if="product?.data?.[1]" class="border-round m-2 text-center p-2 " style="border: 1px solid var(--surface-d)" @click="setActiveApp(product.data?.[0].app_name,product.data?.[0].url ?? '')">
                             <div class="my-5">
-                                <img :src="'images/apps/' + product.data[1].image" :alt="product.data[1].name" class="product-image" />
+                                <img :src="'images/apps/' + product?.data?.[1]?.icon_path  ?? ''" :alt="product?.data?.[1]?.app_name  ?? ''" class="product-image" />
                             </div>
                             <div>
                                 <h4 class="mb-1">
-                                    {{ product.data[1].name }}
+                                    {{ product?.data?.[1]?.app_name  ?? ''}}
                                 </h4>
-                                <h6 class="mt-0 mb-3">{{ product.data[1].description }}</h6>
+                                <h6 class="mt-0 mb-3">{{ product?.data?.[1]?.description  ?? ''}}</h6>
                                 <div class="my-5">
                                     
                                 </div>
                             </div>
                         </div>
+
                     </template>
                 </Carousel>
             </div>

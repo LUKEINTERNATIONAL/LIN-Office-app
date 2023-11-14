@@ -1,206 +1,33 @@
-<script setup>
-import { ref, onMounted } from 'vue';
-import { useToast } from 'primevue/usetoast';
-import CustomerService from '@/service/CustomerService';
-import ProductService from '@/service/ProductService';
-import { FilterMatchMode } from 'primevue/api';
 
-
-const toast = useToast();
-const loading = ref(true);
-const dt = ref();
-const productDialog = ref(false);
-const deleteProductDialog = ref(false);
-const deleteProductsDialog = ref(false);
-const product = ref({});
-const selectedProducts = ref();
-const filters = ref({
-    'global': {value: null, matchMode: FilterMatchMode.CONTAINS},
-});
-const submitted = ref(false);
-
-const onAdvancedUpload = () => {
-    toast.add({ severity: 'info', summary: 'Success', detail: 'File Uploaded', life: 3000 });
-};
-
-const customerService = new CustomerService();
-const productService = new ProductService();
-
-const customers = ref();
-const viewAttachement = ref();
-const editingRows = ref([]);
-const visible = ref(false);
-const statuses = ref([
-    { label: 'failed', value: 'failed' },
-    { label: 'success', value: 'success' },
-    { label: 'in-progress', value: 'in-progress' },
-    { label: 'on-hold', value: 'on-hold' }
-]);
-const projects = ref([
-    { label: 'kuwunika', value: 'kuwunika' },
-    { label: 'Unicef', value: 'Unicef' },
-    { label: 'CDC', value: 'CDC' },
-    { label: 'WDF', value: 'WDF' },
-    { label: 'PIH', value: 'PIH' }
-]);
-const leave = ref([
-    { label: 'Anual Holiday', value: 'anual_holiday' },
-    { label: 'Sick Leave', value: 'sick_leave' },
-    { label: 'Unpaid Leave', value: 'unpaid_leave' }
-]);
-
-const onSortChange = (event) => {
-    const value = event.value.value;
-    const sortValue = event.value;
-
-    if (value.indexOf('!') === 0) {
-        sortOrder.value = -1;
-        sortField.value = value.substring(1, value.length);
-        sortKey.value = sortValue;
-    } else {
-        sortOrder.value = 1;
-        sortField.value = value;
-        sortKey.value = sortValue;
-    }
-};
-const dataviewValue = ref();
-const layout = ref('grid');
-const sortKey = ref(null);
-const sortOrder = ref(null);
-const sortField = ref(null);
-const sortOptions = ref([
-    { label: 'Price High to Low', value: '!price' },
-    { label: 'Price Low to High', value: 'price' }
-]);
-
-
-const formatCurrency = (value) => {
-    if(value)
-        return value.toLocaleString('en-US', {style: 'currency', currency: 'USD'});
-    return;
-};
-const openNew = () => {
-    customers.value.push({"date": ""});
-    console.log(customers.value) 
-};
-const hideDialog = () => {
-    productDialog.value = false;
-    submitted.value = false;
-};
-const saveProduct = () => {
-    submitted.value = true;
-
-    if (product.value.name.trim()) {
-        if (product.value.id) {
-            product.value.inventoryStatus = product.value.inventoryStatus.value ? product.value.inventoryStatus.value : product.value.inventoryStatus;
-            products.value[findIndexById(product.value.id)] = product.value;
-            toast.add({severity:'success', summary: 'Successful', detail: 'Product Updated', life: 3000});
-        }
-        else {
-            product.value.id = createId();
-            product.value.code = createId();
-            product.value.image = 'product-placeholder.svg';
-            product.value.inventoryStatus = product.value.inventoryStatus ? product.value.inventoryStatus.value : 'INSTOCK';
-            products.value.push(product.value);
-            toast.add({severity:'success', summary: 'Successful', detail: 'Product Created', life: 3000});
-        }
-
-        productDialog.value = false;
-        product.value = {};
-    }
-};
-const editProduct = (prod) => {
-    product.value = {...prod};
-    productDialog.value = true;
-};
-const confirmDeleteProduct = (prod) => {
-    product.value = prod;
-    deleteProductDialog.value = true;
-};
-const deleteProduct = () => {
-    products.value = products.value.filter(val => val.id !== product.value.id);
-    deleteProductDialog.value = false;
-    product.value = {};
-    toast.add({severity:'success', summary: 'Successful', detail: 'Product Deleted', life: 3000});
-};
-const findIndexById = (id) => {
-    let index = -1;
-    for (let i = 0; i < products.value.length; i++) {
-        if (products.value[i].id === id) {
-            index = i;
-            break;
-        }
-    }
-
-    return index;
-};
-const createId = () => {
-    let id = '';
-    var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    for ( var i = 0; i < 5; i++ ) {
-        id += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return id;
-}
-const exportCSV = () => {
-    dt.value.exportCSV();
-};
-const confirmDeleteSelected = () => {
-    deleteProductsDialog.value = true;
-};
-const deleteSelectedProducts = () => {
-    products.value = products.value.filter(val => !selectedProducts.value.includes(val));
-    deleteProductsDialog.value = false;
-    selectedProducts.value = null;
-    toast.add({severity:'success', summary: 'Successful', detail: 'Products Deleted', life: 3000});
-};
-
-
-onMounted(() => {
-    customerService.getCustomersMedium().then((data) => (customers.value = data));
-    productService.getProductsSmall().then((data1) => (dataviewValue.value = data1));
-    loading.value = false;
-
-});
-
-const onRowEditSave = (event) => {
-    let { newData, index } = event;
-
-    // customers.value[index] = newData;
-};
-
-const getSeverity = (status) => {
-    switch (status) {
-        case 'failed':
-            return 'danger';
-
-        case 'success':
-            return 'success';
-
-        case 'in-progress':
-            return 'info';
-
-        case 'on-hold':
-            return 'warning';
-
-        case 'unknown':
-            return null;
-
-        default:
-            return null;
-    }
-};
-</script>
 <template>
 
     <div class="card">
          <Toolbar class="mb-4">
             <template #start>
-                <Button label="New" icon="pi pi-plus" severity="success" class="mr-2" @click="openNew" />
-                <Button label="Delete" icon="pi pi-trash" severity="danger" @click="confirmDeleteSelected" :disabled="!selectedProducts || !selectedProducts.length" />
+                <Dropdown v-model="selectedCountry" :options="countries" filter optionLabel="name" placeholder="Select Employee" class="w-full md:w-14rem">
+                    <template #value="slotProps">
+                        <div v-if="slotProps.value" class="flex align-items-center">
+                            <img :alt="slotProps.value.label" src="https://primefaces.org/cdn/primevue/images/flag/flag_placeholder.png" :class="`mr-2 flag flag-${slotProps.value.code.toLowerCase()}`" style="width: 18px" />
+                            <div>{{ slotProps.value.name }}</div>
+                        </div>
+                        <span v-else>
+                            {{ slotProps.placeholder }}
+                        </span>
+                    </template>
+                    <template #option="slotProps">
+                        <div class="flex align-items-center">
+                            <img :alt="slotProps.option.label" src="https://primefaces.org/cdn/primevue/images/flag/flag_placeholder.png" :class="`mr-2 flag flag-${slotProps.option.code.toLowerCase()}`" style="width: 18px" />
+                            <div>{{ slotProps.option.name }}</div>
+                        </div>
+                    </template>
+                </Dropdown>
             </template>
-
+            <template #center>
+               <span style="margin-right: 10px; font-weight: 700;">Date Rage: </span> 
+               <Calendar v-model="dates" selectionMode="range" showButtonBar :manualInput="false" />
+            </template>
             <template #end>
+                <Button label="Approve" icon="pi pi-upload" severity="info" style="margin-right: 10px;" />
                 <Button label="Export" icon="pi pi-upload" severity="help" @click="exportCSV($event)"  />
             </template>
         </Toolbar>
@@ -234,7 +61,6 @@ const getSeverity = (status) => {
                 </span>
             </div>
         </template>
-        <Column selectionMode="multiple" style="width: 3rem" :exportable="false"></Column>
             <Column field="date" header="Date"  style="min-width: 170px">
                 <template #editor="{ data, field }">
                     <Calendar v-model="data[field]" showButtonBar/>
@@ -291,11 +117,9 @@ const getSeverity = (status) => {
             </Column>
             <Column field="" header="Attachments" >
                 <template #body="slotProps">
-                    <Button :value="slotProps" class="p-button-outlined mr-2 mb-2" label="" severity="success" icon="pi pi-paperclip" @click="visible = true" />
                     <Button :value="slotProps" class="p-button-outlined mr-2 mb-2" label="" severity="info" icon="pi pi-eye" @click="viewAttachement = true" />
                 </template>
             </Column>
-            <Column :rowEditor="true" style="width: 10px; min-width: 7rem" bodyStyle="text-align:center"></Column>
         </DataTable>
     </div>
 
@@ -436,5 +260,214 @@ const getSeverity = (status) => {
         </template>
     </Dialog>
 </template>
+
+
+
+<script setup>
+import { ref, onMounted } from 'vue';
+import { useToast } from 'primevue/usetoast';
+import CustomerService from '@/service/CustomerService';
+import ProductService from '@/service/ProductService';
+import { FilterMatchMode } from 'primevue/api';
+
+
+const toast = useToast();
+const loading = ref(true);
+const dt = ref();
+const productDialog = ref(false);
+const deleteProductDialog = ref(false);
+const deleteProductsDialog = ref(false);
+const product = ref({});
+const selectedProducts = ref();
+const filters = ref({
+    'global': {value: null, matchMode: FilterMatchMode.CONTAINS},
+});
+const submitted = ref(false);
+
+const onAdvancedUpload = () => {
+    toast.add({ severity: 'info', summary: 'Success', detail: 'File Uploaded', life: 3000 });
+};
+
+const customerService = new CustomerService();
+const productService = new ProductService();
+
+const customers = ref();
+const viewAttachement = ref();
+const editingRows = ref([]);
+const visible = ref(false);
+const statuses = ref([
+    { label: 'failed', value: 'failed' },
+    { label: 'success', value: 'success' },
+    { label: 'in-progress', value: 'in-progress' },
+    { label: 'on-hold', value: 'on-hold' }
+]);
+const projects = ref([
+    { label: 'kuwunika', value: 'kuwunika' },
+    { label: 'Unicef', value: 'Unicef' },
+    { label: 'CDC', value: 'CDC' },
+    { label: 'WDF', value: 'WDF' },
+    { label: 'PIH', value: 'PIH' }
+]);
+const leave = ref([
+    { label: 'Anual Holiday', value: 'anual_holiday' },
+    { label: 'Sick Leave', value: 'sick_leave' },
+    { label: 'Unpaid Leave', value: 'unpaid_leave' }
+]);
+
+const onSortChange = (event) => {
+    const value = event.value.value;
+    const sortValue = event.value;
+
+    if (value.indexOf('!') === 0) {
+        sortOrder.value = -1;
+        sortField.value = value.substring(1, value.length);
+        sortKey.value = sortValue;
+    } else {
+        sortOrder.value = 1;
+        sortField.value = value;
+        sortKey.value = sortValue;
+    }
+};
+const dataviewValue = ref();
+const layout = ref('grid');
+const sortKey = ref(null);
+const sortOrder = ref(null);
+const sortField = ref(null);
+const sortOptions = ref([
+    { label: 'Price High to Low', value: '!price' },
+    { label: 'Price Low to High', value: 'price' }
+]);
+const selectedCountry = ref();
+const countries = ref([
+    { name: 'Australia', code: 'AU' },
+    { name: 'Brazil', code: 'BR' },
+    { name: 'China', code: 'CN' },
+    { name: 'Egypt', code: 'EG' },
+    { name: 'France', code: 'FR' },
+    { name: 'Germany', code: 'DE' },
+    { name: 'India', code: 'IN' },
+    { name: 'Japan', code: 'JP' },
+    { name: 'Spain', code: 'ES' },
+    { name: 'United States', code: 'US' }
+]);
+
+const formatCurrency = (value) => {
+    if(value)
+        return value.toLocaleString('en-US', {style: 'currency', currency: 'USD'});
+    return;
+};
+const openNew = () => {
+    customers.value.push({"date": ""});
+    console.log(customers.value) 
+};
+const hideDialog = () => {
+    productDialog.value = false;
+    submitted.value = false;
+};
+const saveProduct = () => {
+    submitted.value = true;
+
+    if (product.value.name.trim()) {
+        if (product.value.id) {
+            product.value.inventoryStatus = product.value.inventoryStatus.value ? product.value.inventoryStatus.value : product.value.inventoryStatus;
+            products.value[findIndexById(product.value.id)] = product.value;
+            toast.add({severity:'success', summary: 'Successful', detail: 'Product Updated', life: 3000});
+        }
+        else {
+            product.value.id = createId();
+            product.value.code = createId();
+            product.value.image = 'product-placeholder.svg';
+            product.value.inventoryStatus = product.value.inventoryStatus ? product.value.inventoryStatus.value : 'INSTOCK';
+            products.value.push(product.value);
+            toast.add({severity:'success', summary: 'Successful', detail: 'Product Created', life: 3000});
+        }
+
+        productDialog.value = false;
+        product.value = {};
+    }
+};
+const editProduct = (prod) => {
+    product.value = {...prod};
+    productDialog.value = true;
+};
+const confirmDeleteProduct = (prod) => {
+    product.value = prod;
+    deleteProductDialog.value = true;
+};
+const deleteProduct = () => {
+    products.value = products.value.filter(val => val.id !== product.value.id);
+    deleteProductDialog.value = false;
+    product.value = {};
+    toast.add({severity:'success', summary: 'Successful', detail: 'Product Deleted', life: 3000});
+};
+const findIndexById = (id) => {
+    let index = -1;
+    for (let i = 0; i < products.value.length; i++) {
+        if (products.value[i].id === id) {
+            index = i;
+            break;
+        }
+    }
+
+    return index;
+};
+const createId = () => {
+    let id = '';
+    var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    for ( var i = 0; i < 5; i++ ) {
+        id += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return id;
+}
+const exportCSV = () => {
+    dt.value.exportCSV();
+};
+const confirmDeleteSelected = () => {
+    deleteProductsDialog.value = true;
+};
+const deleteSelectedProducts = () => {
+    products.value = products.value.filter(val => !selectedProducts.value.includes(val));
+    deleteProductsDialog.value = false;
+    selectedProducts.value = null;
+    toast.add({severity:'success', summary: 'Successful', detail: 'Products Deleted', life: 3000});
+};
+
+
+onMounted(() => {
+    customerService.getCustomersMedium().then((data) => (customers.value = data));
+    productService.getProductsSmall().then((data1) => (dataviewValue.value = data1));
+    loading.value = false;
+
+});
+
+const onRowEditSave = (event) => {
+    let { newData, index } = event;
+
+    // customers.value[index] = newData;
+};
+
+const getSeverity = (status) => {
+    switch (status) {
+        case 'failed':
+            return 'danger';
+
+        case 'success':
+            return 'success';
+
+        case 'in-progress':
+            return 'info';
+
+        case 'on-hold':
+            return 'warning';
+
+        case 'unknown':
+            return null;
+
+        default:
+            return null;
+    }
+};
+</script>
+
 
 

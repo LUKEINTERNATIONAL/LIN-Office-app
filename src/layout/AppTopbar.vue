@@ -78,9 +78,11 @@ const getActiveApp = () => { return sessionStorage.getItem('activeApp') }
 
         <div class="layout-topbar-menu" :class="topbarMenuClasses">
             <button @click="onTopBarMenuButton()" class="p-link layout-topbar-button">
-                <i class="pi pi-user"></i>
-                <span>Profile</span>
+                <i v-badge="2" class="pi pi-bell p-overlay-badge" />
             </button>
+            <button @click="onTopBarMenuButton()" class="p-link layout-topbar-button">
+                <i class="pi pi-user"></i>
+            </button> 
         </div>
     </div>
 </template>

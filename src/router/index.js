@@ -182,4 +182,11 @@ const router = createRouter({
     ]
 });
 
+router.beforeEach((to, from, next) => {
+    const whitelistedUri = ['/auth/login', '/settings/host']
+    if (!sessionStorage.getItem('apiKey') && !whitelistedUri.includes(to.path)) {
+      next('/auth/login')
+    }
+    next()
+  })
 export default router;
