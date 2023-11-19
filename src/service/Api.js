@@ -85,7 +85,8 @@ const ApiClient = (() => {
     function headers() {
         return {
             'Authorization': sessionStorage.apiKey,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Origin': window.location.origin,
         };
     }
 
@@ -115,11 +116,11 @@ const ApiClient = (() => {
             const response = await fetch(url, params);
             return response;
         } catch (e) {
-            console.error(e);
+            // console.error(e);
             if (`${e}`.match(/NetworkError|Failed to fetch/i)) {
-                console.log("test")
+                console.log("Network error Failed to fetch")
             } else {
-                console.log("test")
+                console.log("Error with network")
             }
         }
     }

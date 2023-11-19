@@ -67,7 +67,8 @@ export class Service {
                 throw new RecordConflictError(response.statusText, errors);
             }
             if (response.status === 500) {
-                throw new ApiError('An internal server errror has occured');
+                // throw new ApiError('An internal server errror has occured');
+                console.log("eerrroo")
             }
         }
     }

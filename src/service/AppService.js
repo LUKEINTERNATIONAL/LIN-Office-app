@@ -1,4 +1,3 @@
-// import ApiClient from '@/service/Api';
 import { Service } from '@/service/Service';
 export class AppService extends Service {
   

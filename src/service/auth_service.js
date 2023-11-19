@@ -24,6 +24,7 @@ export default class AuthService {
         if (response.message == 'success') {
             this.token = response.Token;
             this.username = response.username;
+            this.userID = response.id;
             this.startSession()
         } else {
             throw 'Unable to login';

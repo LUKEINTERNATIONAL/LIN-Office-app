@@ -4,6 +4,7 @@
          <Toolbar class="mb-4">
             <template #start>
                 <Button label="New" icon="pi pi-plus" severity="success" class="mr-2" @click="openNew" />
+                <Button label="Group Date" icon="pi pi-check-circle" severity="info" class="mr-2" @click="groupDateBtn" />
             </template>
             <template #center>
                <span style="margin-right: 10px; font-weight: 700;">Date Rage: </span> 
@@ -14,17 +15,14 @@
             </template>
         </Toolbar>
         <DataTable 
-            :value="customers" 
+            :value="timeSheets" 
+            :groupRowsBy="groupDate"
             rowGroupMode="rowspan" 
-            groupRowsBy="date" 
             sortMode="single" 
             sortField="date" 
             :sortOrder="1" 
             tableStyle="min-width: 50rem"
-            v-model:editingRows="editingRows"
-            editMode="row"
             dataKey="id"
-            @row-edit-save="onRowEditSave"
             paginator
             :rows="10"
             ref="dt"
@@ -33,6 +31,10 @@
             :rowsPerPageOptions="[5,10,25]"
             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} "
             :filters="filters"
+            
+            stripedRows
+            editMode="cell" 
+            @cell-edit-complete="onCellEditComplete"
         >
         <template #header>
             <div class="flex flex-wrap gap-2 align-items-center justify-content-between">
@@ -43,21 +45,21 @@
                 </span>
             </div>
         </template>
-            <Column field="date" header="Date"  style="min-width: 170px">
+            <Column field="timesheet_date" header="Date"  style="min-width: 170px">
                 <template #editor="{ data, field }">
-                    <Calendar v-model="data[field]" showButtonBar/>
+                    <Calendar v-model="data[field]" dateFormat="dd/M/yy"  showButtonBar/>
                 </template>
 
             </Column>
-            <Column field="project" header="Project" sortable style="min-width: 100px">
+            <Column field="project_name" header="Project" sortable style="min-width: 100px">
                 <template #editor="{ data, field }">
-                    <Dropdown v-model="data[field]" :options="projects" optionLabel="label" optionValue="value" placeholder="Select project">
+                    <Dropdown v-model="data[field]" selected :options="projects" optionLabel="label" optionValue="value" placeholder="Select project">
                     </Dropdown>
                 </template>
             </Column>
-            <Column field="Holiday" header="Holiday" sortable style="min-width: 100px">
+            <Column field="holiday_name" header="Holiday" sortable style="min-width: 100px">
                 <template #editor="{ data, field }">
-                    <Dropdown v-model="data[field]" :options="Holiday" optionLabel="label" optionValue="value" placeholder="Select Holiday type">
+                    <Dropdown v-model="data[field]" :options="holidays" optionLabel="label" optionValue="value" placeholder="Select Holiday type">
                     </Dropdown>
                 </template>
             </Column>
@@ -71,19 +73,24 @@
                     <Textarea v-model="data[field]" > </Textarea>
                 </template>
             </Column>
-            <Column field="period" header="Period" sortable style="min-width: 140px">
+            <Column field="start_time" header="From" sortable style="min-width: 50px">
                 <template #editor="{ data, field }" >
                     <div style="display: flex; ">
-                        <p style="margin-right: 10px;">From: </p>
-                        <Calendar id="calendar-timeonly" v-model="data[field]" timeOnly style="width: 60px" />
+                        <Calendar  id="calendar-timeonly" showTime hourFormat="24" v-model="data[field]" timeOnly style="width: 60px" />
                     </div>
-                    <div  style="display: flex; margin-top: 10px; ">
-                        <p style="margin-right: 27px; ">To: </p>
-                        <Calendar id="calendar-timeonly" v-model="data[field]" timeOnly style="width: 60px"/>
+                </template>
+            </Column>
+            <Column field="end_time"  header="To" sortable style="min-width: 50px">
+                <template #editor="{ data, field }" >
+                    <div  style="display: flex; ">
+                        <Calendar id="calendar-timeonly" showTime hourFormat="24" v-model="data[field]" timeOnly style="width: 60px"/>
                     </div>
                 </template>
             </Column>
             <Column field="hours" header="Hours" sortable style="min-width: 50px">
+                <template #body="slotProps">
+                 <p>{{ timeDifferenceInHours(slotProps.data.start_time, slotProps.data.end_time) }}</p>
+                </template>
             </Column>
             <Column field="status" header="Status" sortable style="min-width: 100px">
                 <template #editor="{ data, field }">
@@ -97,18 +104,16 @@
                     <Tag :value="slotProps.data.status" :severity="getSeverity(slotProps.data.status)"/>
                 </template>
             </Column>
-            <Column field="" header="Attachments" >
+            <Column   field="attachments_id" header="Attachments" style="min-width: 130px">
                 <template #body="slotProps">
                     <Button :value="slotProps" class="p-button-outlined mr-2 mb-2" label="" severity="success" icon="pi pi-paperclip" @click="visible = true" />
-                    <i v-badge="2" class="pi p-overlay-badge" style="display: inline;" >
-                        <Button :value="slotProps"   
-                        class="p-button-outlined mr-2 mb-2" 
-                        label="" severity="info" icon="pi pi-eye" @click="viewAttachement = true" />
+                    <Button :value="slotProps"   
+                    class="p-button-outlined mr-2 mb-2" 
+                    label="" severity="info" icon="pi pi-eye" @click="viewAttachement = true" />
+                    <i v-if="attachments" v-badge="2" class="pi p-overlay-badge" style="display: inline;" >
                     </i>
-                   
                 </template>
             </Column>
-            <Column :rowEditor="true" style="width: 9px;" bodyStyle="text-align:center"></Column>
             <Column  style="width: 9px;"  bodyStyle="text-align:center">
                 <template #body="slotProps">
                 <Button icon="pi pi-trash" :value="slotProps"  severity="danger" text rounded aria-label="Cancel" />
@@ -263,12 +268,14 @@ import { useToast } from 'primevue/usetoast';
 import CustomerService from '@/service/CustomerService';
 import ProductService from '@/service/ProductService';
 import { FilterMatchMode } from 'primevue/api';
-import { Timesheet } from '@/apps/timesheet/services/TimesheetService';
+import { TimesheetService } from '@/apps/timesheet/services/TimesheetService';
+import dayjs from "dayjs";
 
 const toast = useToast();
 const loading = ref(true);
 const dt = ref();
 const productDialog = ref(false);
+let groupDate = ref(sessionStorage.getItem('groupTimesheetDate'));
 const deleteProductDialog = ref(false);
 const deleteProductsDialog = ref(false);
 const product = ref({});
@@ -286,7 +293,7 @@ const onAdvancedUpload = () => {
 const customerService = new CustomerService();
 const productService = new ProductService();
 
-const customers = ref();
+const timeSheets = ref();
 const viewAttachement = ref();
 const editingRows = ref([]);
 const visible = ref(false);
@@ -296,18 +303,8 @@ const statuses = ref([
     { label: 'in-progress', value: 'in-progress' },
     { label: 'on-hold', value: 'on-hold' }
 ]);
-const projects = ref([
-    { label: 'kuwunika', value: 'kuwunika' },
-    { label: 'Unicef', value: 'Unicef' },
-    { label: 'CDC', value: 'CDC' },
-    { label: 'WDF', value: 'WDF' },
-    { label: 'PIH', value: 'PIH' }
-]);
-const Holiday = ref([
-    { label: 'Anual Holiday', value: 'anual_holiday' },
-    { label: 'Sick Leave', value: 'sick_leave' },
-    { label: 'Unpaid Leave', value: 'unpaid_leave' }
-]);
+const projects = ref();
+const holidays = ref();
 
 const onSortChange = (event) => {
     const value = event.value.value;
@@ -323,6 +320,17 @@ const onSortChange = (event) => {
         sortKey.value = sortValue;
     }
 };
+const dateToTime = (dateString) =>{
+    if (typeof dateString === 'object'){
+        const hours = dateString.getHours();
+        const minutes = dateString.getMinutes();
+        const formattedTime = `${hours < 10 ? '0' : ''}${hours}:${minutes < 10 ? '0' : ''}${minutes}`;
+        return  formattedTime ;
+    }else
+    {
+        return dateString
+    }
+}
 const dataviewValue = ref();
 const layout = ref('grid');
 const sortKey = ref(null);
@@ -339,47 +347,76 @@ const formatCurrency = (value) => {
         return value.toLocaleString('en-US', {style: 'currency', currency: 'USD'});
     return;
 };
+const groupDateBtn = () => {
+    groupDate.value ? sessionStorage.setItem("groupTimesheetDate", '') : sessionStorage.setItem("groupTimesheetDate", 'timesheet_date');
+    location.reload();
+}
 const openNew = () => {
-    if(customers.value[customers.value.length-1].date != "")
+    if(timeSheets.value[timeSheets.value.length-1].project_id != "")
     {
-        customers.value.push({
-            "id": "",
-            "project": "",
+        timeSheets.value.push({
+            "timesheet_date": getTodayDate(),
+            "project_id": "",
+            "holiday_id": "",
+            "user_id": TimesheetService.getUserID(),
+            "attachments_id": 0,
             "task": "",
             "description": "",
-            "period": "",
-            "hours": "",
             "status": "",
-            "date": ""
-        
+            "start_time": "",
+            "end_time": ""
         });
     }
 };
-const onRowEditSave = (event) => {
+const hasEmptyValues =(obj) =>{
+    for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+            if (obj[key] === null || obj[key] === undefined || obj[key] === "") {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+const onCellEditComplete = async (event) => {
     let { newData, index } = event;
 
-    const indexOfObjectToUpdate = customers.value.findIndex(obj => obj.id === newData.id);
-    if(customers.value[indexOfObjectToUpdate].date == "")
-        insertNew(newData)
-    customers.value[indexOfObjectToUpdate] = newData;
+    const indexOfObjectToUpdate = timeSheets.value.findIndex(obj => obj.id === newData.id);
+        newData.start_time = dateToTime(newData.start_time)
+        newData.end_time = dateToTime(newData.end_time)
+
+
+    if (Array.isArray(newData.project_name) && newData.project_name.length > 0){
+        newData.project_id = newData.project_name[0]
+        newData.project_name = newData.project_name[1]
+    }
+   
+    if (Array.isArray(newData.holiday_name) && newData.holiday_name.length > 0){
+        newData.holiday_id = newData.holiday_name[0]
+        newData.holiday_name = newData.holiday_name[1]
+    }
+    if (hasEmptyValues(newData)) {
+        console.log("The object has empty values.");
+    } else {
+        console.log("The object does not have empty values.");
+    }
+    if(timeSheets.value[indexOfObjectToUpdate].project_id == "")
+        await TimesheetService.createTimesheet(newData);
+    else
+        await TimesheetService.updateTimesheet(newData);
+    timeSheets.value[indexOfObjectToUpdate] = newData;
     
 };
-const insertNew = (newData) => {
-   const params ={
-            "timesheet_date": newData.date,
-            "project_id": newData.project,
-            "holiday_id": newData,
-            "user_id": newData,
-            "attachments_id": newData,
-            "task": newData.task,
-            "description": newData.description,
-            "start_time": newData,
-            "end_time": newData,
-            "status": newData.status
-        }
-        toast.add({severity:'success', summary: 'Successful', detail: 'Product Created', life: 3000});
-    // const req = await ApiClient.post('timesheet/create', newData);
-    console.log(params)
+const getTodayDate = () => {
+    // Create a new Date object
+const today = new Date();
+
+// Define options for formatting the date
+const options = { day: '2-digit', month: 'long', year: 'numeric' };
+
+// Format the date as a string
+return dayjs().format('DD/MMM/YYYY')
+
 }
 const hideDialog = () => {
     productDialog.value = false;
@@ -424,14 +461,40 @@ const deleteSelectedProducts = () => {
     toast.add({severity:'success', summary: 'Successful', detail: 'Products Deleted', life: 3000});
 };
 
+function timeToMinutes(time) {
+    time = dateToTime(time)
+    const [hours, minutes] = time?.split(':').map(Number);
+    return hours * 60 + minutes;
+}
 
-onMounted(() => {
-    customerService.getCustomersMedium().then((data) => (customers.value = data));
-    productService.getProductsSmall().then((data1) => (dataviewValue.value = data1));
+// Function to find the difference in hours between two times
+function timeDifferenceInHours(startTime, endTime) {
+    const minutesDifference = timeToMinutes(endTime) - timeToMinutes(startTime);
+    const hoursDifference = minutesDifference / 60;
+    return hoursDifference.toFixed(2);
+}
+onMounted( async () => {
+    listProjects()
+    listHolidays()
+    timeSheets.value = await TimesheetService.getTimesheets()
+    timeSheets.value = timeSheets.value['projects']
     loading.value = false;
 });
 
-
+const listProjects = async () =>{
+    let data = await TimesheetService.getProjects()
+    projects.value = data?.projects.map(project => ({
+        label: project.project_name,
+        value: [project.id,project.project_name]
+     }));
+}   
+const listHolidays = async () =>{
+    let data = await TimesheetService.getHolidays()
+    holidays.value = data?.holidays.map(holiday => ({
+        label: holiday.holiday_name,
+        value: [holiday.id,holiday.holiday_name]
+     }));
+}
 
 const getSeverity = (status) => {
     switch (status) {

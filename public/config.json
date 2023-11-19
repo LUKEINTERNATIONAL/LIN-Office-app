@@ -1,6 +1,6 @@
 {
 	"apiURL": "0.0.0.0",
-	"apiPort": "8000",
+	"apiPort": "8001",
 	"apiProtocol": "http",
 	"appConf": {
 		"devMode": true,
