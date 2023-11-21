@@ -1,16 +1,25 @@
 <template>
-
+    <Toast />
     <div class="card">
-         <Toolbar class="mb-4">
+        <Toolbar class="mb-4">
             <template #start>
                 <Button label="New" icon="pi pi-plus" severity="success" class="mr-2" @click="openNew" />
-                <Button label="Group Date" icon="pi pi-check-circle" severity="info" class="mr-2" @click="groupDateBtn" />
             </template>
             <template #center>
                <span style="margin-right: 10px; font-weight: 700;">Date Rage: </span> 
-               <Calendar v-model="dates" selectionMode="range" showButtonBar :manualInput="false" />
+               <Calendar 
+                    v-model="dates" 
+                    selectionMode="range" 
+                    view="month" 
+                    dateFormat="M/yy" 
+                    :maxDate="maxDate" 
+                    showButtonBar 
+                    :manualInput="false" 
+                    @hide="getRageTimesheet()"
+                />
             </template>
             <template #end>
+                <Button label="Group Date" icon="pi pi-check-circle" severity="info" class="mr-2" @click="groupDateBtn" />
                 <Button label="Export" icon="pi pi-upload" severity="help" @click="exportCSV($event)"  />
             </template>
         </Toolbar>
@@ -19,8 +28,8 @@
             :groupRowsBy="groupDate"
             rowGroupMode="rowspan" 
             sortMode="single" 
-            sortField="date" 
-            :sortOrder="1" 
+            sortField="timesheet_date" 
+            :sortOrder="-1" 
             tableStyle="min-width: 50rem"
             dataKey="id"
             paginator
@@ -31,21 +40,24 @@
             :rowsPerPageOptions="[5,10,25]"
             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} "
             :filters="filters"
-            
             stripedRows
             editMode="cell" 
             @cell-edit-complete="onCellEditComplete"
         >
-        <template #header>
-            <div class="flex flex-wrap gap-2 align-items-center justify-content-between">
-                <h4 class="m-0">Manage Timesheet</h4>
-                <span class="p-input-icon-left">
-                    <i class="pi pi-search" />
-                    <InputText v-model="filters['global'].value" placeholder="Search..." />
-                </span>
-            </div>
-        </template>
-            <Column field="timesheet_date" header="Date"  style="min-width: 170px">
+            <template #header>
+                <div class="flex flex-wrap gap-2 align-items-center justify-content-between">
+                    <h4 class="m-0">Manage Timesheet</h4>
+                    <h5 style="font-size: 15px;" > 
+                        <b >Status: </b> 
+                        <span :class="timesheetStatus">Pending Approval</span>
+                    </h5>
+                    <span class="p-input-icon-left">
+                        <i class="pi pi-search" />
+                        <InputText v-model="filters['global'].value" placeholder="Search..." />
+                    </span>
+                </div>
+            </template>
+            <Column field="timesheet_date" header="Date" sortable style="min-width: 170px">
                 <template #editor="{ data, field }">
                     <Calendar v-model="data[field]" dateFormat="dd/M/yy"  showButtonBar/>
                 </template>
@@ -63,14 +75,14 @@
                     </Dropdown>
                 </template>
             </Column>
-            <Column field="task" header="Task" sortable style="min-width: 200px">
+            <Column field="task"  header="Task" sortable style="min-width: 200px">
                 <template #editor="{ data, field }">
-                    <InputText v-model="data[field]" />
+                    <InputText :disabled="holiday_disable" v-model="data[field]" />
                 </template>
             </Column>
             <Column field="description" header="Description" sortable style="min-width: 200px">
                 <template #editor="{ data, field }">
-                    <Textarea v-model="data[field]" > </Textarea>
+                    <Textarea :disabled="holiday_disable" v-model="data[field]" > </Textarea>
                 </template>
             </Column>
             <Column field="start_time" header="From" sortable style="min-width: 50px">
@@ -114,9 +126,9 @@
                     </i>
                 </template>
             </Column>
-            <Column  style="width: 9px;"  bodyStyle="text-align:center">
+            <Column style="width: 9px;"  bodyStyle="text-align:center">
                 <template #body="slotProps">
-                <Button icon="pi pi-trash" :value="slotProps"  severity="danger" text rounded aria-label="Cancel" />
+                <Button icon="pi pi-trash" :value="slotProps"  severity="danger" @click="confirmDeleteTimesheet(slotProps)" text rounded aria-label="Cancel" />
             </template>
             </Column>
         </DataTable>
@@ -172,115 +184,39 @@
             </DataView>
         </div>
     </Dialog>
-    <Dialog v-model:visible="productDialog" :style="{width: '450px'}" header="Product Details" :modal="true" class="p-fluid">
-        <img v-if="product.image" :src="`https://primefaces.org/cdn/primevue/images/product/${product.image}`" :alt="product.image" class="block m-auto pb-3" />
-        <div class="field">
-            <label for="name">Name</label>
-            <InputText id="name" v-model.trim="product.name" required="true" autofocus :class="{'p-invalid': submitted && !product.name}" />
-            <small class="p-error" v-if="submitted && !product.name">Name is required.</small>
-        </div>
-        <div class="field">
-            <label for="description">Description</label>
-            <Textarea id="description" v-model="product.description" required="true" rows="3" cols="20" />
-        </div>
-
-        <div class="field">
-            <label for="inventoryStatus" class="mb-3">Inventory Status</label>
-            <Dropdown id="inventoryStatus" v-model="product.inventoryStatus" :options="statuses" optionLabel="label" placeholder="Select a Status">
-                <template #value="slotProps">
-                    <div v-if="slotProps.value && slotProps.value.value">
-                        <Tag :value="slotProps.value.value" :severity="getStatusLabel(slotProps.value.label)" />
-                    </div>
-                    <div v-else-if="slotProps.value && !slotProps.value.value">
-                        <Tag :value="slotProps.value" :severity="getStatusLabel(slotProps.value)" />
-                    </div>
-                    <span v-else>
-                        {{slotProps.placeholder}}
-                    </span>
-                </template>
-            </Dropdown>
-        </div>
-
-        <div class="field">
-            <label class="mb-3">Category</label>
-            <div class="formgrid grid">
-                <div class="field-radiobutton col-6">
-                    <RadioButton id="category1" name="category" value="Accessories" v-model="product.category" />
-                    <label for="category1">Accessories</label>
-                </div>
-                <div class="field-radiobutton col-6">
-                    <RadioButton id="category2" name="category" value="Clothing" v-model="product.category" />
-                    <label for="category2">Clothing</label>
-                </div>
-                <div class="field-radiobutton col-6">
-                    <RadioButton id="category3" name="category" value="Electronics" v-model="product.category" />
-                    <label for="category3">Electronics</label>
-                </div>
-                <div class="field-radiobutton col-6">
-                    <RadioButton id="category4" name="category" value="Fitness" v-model="product.category" />
-                    <label for="category4">Fitness</label>
-                </div>
-            </div>
-        </div>
-
-        <div class="formgrid grid">
-            <div class="field col">
-                <label for="price">Price</label>
-                <InputNumber id="price" v-model="product.price" mode="currency" currency="USD" locale="en-US" />
-            </div>
-            <div class="field col">
-                <label for="quantity">Quantity</label>
-                <InputNumber id="quantity" v-model="product.quantity" integeronly />
-            </div>
-        </div>
-        <template #footer>
-            <Button label="Cancel" icon="pi pi-times" text @click="hideDialog"/>
-            <Button label="Save" icon="pi pi-check" text @click="saveProduct" />
-        </template>
-    </Dialog>
-    <Dialog v-model:visible="deleteProductDialog" :style="{width: '450px'}" header="Confirm" :modal="true">
+    
+    <Dialog v-model:visible="deleteTimesheetDialog" :style="{width: '450px'}" header="Confirm" :modal="true">
         <div class="confirmation-content">
             <i class="pi pi-exclamation-triangle mr-3" style="font-size: 2rem" />
             <span v-if="product">Are you sure you want to delete <b>{{product.name}}</b>?</span>
         </div>
         <template #footer>
-            <Button label="No" icon="pi pi-times" text @click="deleteProductDialog = false"/>
-            <Button label="Yes" icon="pi pi-check" text @click="deleteProduct" />
-        </template>
-    </Dialog>
-    <Dialog v-model:visible="deleteProductsDialog" :style="{width: '450px'}" header="Confirm" :modal="true">
-        <div class="confirmation-content">
-            <i class="pi pi-exclamation-triangle mr-3" style="font-size: 2rem" />
-            <span v-if="product">Are you sure you want to delete the selected products?</span>
-        </div>
-        <template #footer>
-            <Button label="No" icon="pi pi-times" text @click="deleteProductsDialog = false"/>
-            <Button label="Yes" icon="pi pi-check" text @click="deleteSelectedProducts" />
+            <Button label="No" icon="pi pi-times" text @click="deleteTimesheetDialog = false"/>
+            <Button label="Yes" icon="pi pi-check" text @click="deleteTimesheet" />
         </template>
     </Dialog>
 </template>
-
-
-
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useToast } from 'primevue/usetoast';
-import CustomerService from '@/service/CustomerService';
-import ProductService from '@/service/ProductService';
 import { FilterMatchMode } from 'primevue/api';
 import { TimesheetService } from '@/apps/timesheet/services/TimesheetService';
 import dayjs from "dayjs";
 
 const toast = useToast();
 const loading = ref(true);
+const holiday_disable = ref(false);
 const dt = ref();
 const productDialog = ref(false);
-let groupDate = ref(sessionStorage.getItem('groupTimesheetDate'));
-const deleteProductDialog = ref(false);
+const groupDate = ref(sessionStorage.getItem('groupTimesheetDate'));
+const deleteTimesheetDialog = ref(false);
 const deleteProductsDialog = ref(false);
 const product = ref({});
 const selectedProducts = ref();
-const dates = ref();
+const dates = ref(dayjs().format('MMM/YYYY'));
+const timesheetID = ref();
+const maxDate = ref(new Date());
+const timesheetStatus = ref('timesheetStatus approvalWarningColor');
 const filters = ref({
     'global': {value: null, matchMode: FilterMatchMode.CONTAINS},
 });
@@ -290,12 +226,8 @@ const onAdvancedUpload = () => {
     toast.add({ severity: 'info', summary: 'Success', detail: 'File Uploaded', life: 3000 });
 };
 
-const customerService = new CustomerService();
-const productService = new ProductService();
-
 const timeSheets = ref();
 const viewAttachement = ref();
-const editingRows = ref([]);
 const visible = ref(false);
 const statuses = ref([
     { label: 'failed', value: 'failed' },
@@ -342,22 +274,30 @@ const sortOptions = ref([
 ]);
 
 
-const formatCurrency = (value) => {
-    if(value)
-        return value.toLocaleString('en-US', {style: 'currency', currency: 'USD'});
-    return;
-};
 const groupDateBtn = () => {
     groupDate.value ? sessionStorage.setItem("groupTimesheetDate", '') : sessionStorage.setItem("groupTimesheetDate", 'timesheet_date');
-    location.reload();
+    groupDate.value = sessionStorage.getItem('groupTimesheetDate')
 }
 const openNew = () => {
     if(timeSheets.value[timeSheets.value.length-1].project_id != "")
     {
-        timeSheets.value.push({
+        timeSheets.value.push(timesheetData());
+    }
+};
+const getRageTimesheet = async() => {
+    console.log(dates)
+    const params = {
+        'start_date':getStartDate(),
+        'end_date':getEndDate(),
+        'user_id':TimesheetService.getUserID()
+    }
+    timeSheets.value = await TimesheetService.getTimesheets(params)
+};
+const timesheetData = ()=>{
+    return   {
             "timesheet_date": getTodayDate(),
             "project_id": "",
-            "holiday_id": "",
+            "holiday_id": 0,
             "user_id": TimesheetService.getUserID(),
             "attachments_id": 0,
             "task": "",
@@ -365,13 +305,22 @@ const openNew = () => {
             "status": "",
             "start_time": "",
             "end_time": ""
-        });
-    }
-};
+        }
+}
 const hasEmptyValues =(obj) =>{
     for (const key in obj) {
         if (obj.hasOwnProperty(key)) {
-            if (obj[key] === null || obj[key] === undefined || obj[key] === "") {
+            if (
+                (obj[key] === null 
+                || obj[key] === undefined 
+                || obj[key] === "")  
+                && key != "holiday_name"
+                && key != "holiday_id"
+                && key != "project_name"
+                && key != "project_id"
+                && key != "id"
+                && key != "attachments_id"
+            ) {
                 return true;
             }
         }
@@ -380,11 +329,9 @@ const hasEmptyValues =(obj) =>{
 }
 const onCellEditComplete = async (event) => {
     let { newData, index } = event;
-
-    const indexOfObjectToUpdate = timeSheets.value.findIndex(obj => obj.id === newData.id);
-        newData.start_time = dateToTime(newData.start_time)
-        newData.end_time = dateToTime(newData.end_time)
-
+    newData.start_time = dateToTime(newData.start_time)
+    newData.end_time = dateToTime(newData.end_time)
+    newData.timesheet_date = dayjs(newData.timesheet_date).format('DD/MMM/YYYY')
 
     if (Array.isArray(newData.project_name) && newData.project_name.length > 0){
         newData.project_id = newData.project_name[0]
@@ -395,28 +342,38 @@ const onCellEditComplete = async (event) => {
         newData.holiday_id = newData.holiday_name[0]
         newData.holiday_name = newData.holiday_name[1]
     }
-    if (hasEmptyValues(newData)) {
-        console.log("The object has empty values.");
-    } else {
-        console.log("The object does not have empty values.");
+
+    const indexOfObjectToUpdate = timeSheets.value.findIndex(obj => obj.id === newData.id);
+    if(newData.holiday_id !=0){
+        newData.start_time = "08:00"
+        newData.end_time  = "16:00"
+        newData.task  = ''
+        newData.description  = ""
+        holiday_disable.value = true
     }
-    if(timeSheets.value[indexOfObjectToUpdate].project_id == "")
+
+    if(timeSheets.value[indexOfObjectToUpdate].id){
+        if (!hasEmptyValues(newData) || newData.holiday_id !=0) {
+            await TimesheetService.updateTimesheet(newData);
+            toast.add({severity:'success', summary: 'Success Message', detail: 'Record updated successfuly', life: 3000});
+        }
+        else{
+            toast.add({severity:'warn', summary: 'Empty Field', detail: 'The field was not update', life: 3000});
+            return
+        }
+    }
+    else if (!hasEmptyValues(newData) || newData.holiday_id !=0) {
         await TimesheetService.createTimesheet(newData);
-    else
-        await TimesheetService.updateTimesheet(newData);
+        toast.add({severity:'success', summary: 'Success Message', detail: 'Record created successfuly', life: 3000});
+    }else{
+        toast.add({severity:'warn', summary: 'Not saved', detail: 'Please fill in the remaing fields', life: 3000});
+    }
+
     timeSheets.value[indexOfObjectToUpdate] = newData;
     
 };
 const getTodayDate = () => {
-    // Create a new Date object
-const today = new Date();
-
-// Define options for formatting the date
-const options = { day: '2-digit', month: 'long', year: 'numeric' };
-
-// Format the date as a string
-return dayjs().format('DD/MMM/YYYY')
-
+    return dayjs().format('DD/MMM/YYYY')
 }
 const hideDialog = () => {
     productDialog.value = false;
@@ -427,27 +384,11 @@ const editProduct = (prod) => {
     product.value = {...prod};
     productDialog.value = true;
 };
-const confirmDeleteProduct = (prod) => {
-    product.value = prod;
-    deleteProductDialog.value = true;
+const confirmDeleteTimesheet = (id) => {
+    timesheetID.value = id.data['id']
+    deleteTimesheetDialog.value = true;
 };
-const deleteProduct = () => {
-    products.value = products.value.filter(val => val.id !== product.value.id);
-    deleteProductDialog.value = false;
-    product.value = {};
-    toast.add({severity:'success', summary: 'Successful', detail: 'Product Deleted', life: 3000});
-};
-const findIndexById = (id) => {
-    let index = -1;
-    for (let i = 0; i < products.value.length; i++) {
-        if (products.value[i].id === id) {
-            index = i;
-            break;
-        }
-    }
 
-    return index;
-};
 const exportCSV = () => {
     dt.value.exportCSV();
 };
@@ -476,11 +417,21 @@ function timeDifferenceInHours(startTime, endTime) {
 onMounted( async () => {
     listProjects()
     listHolidays()
-    timeSheets.value = await TimesheetService.getTimesheets()
+    const params = {
+        'start_date':getStartDate(),
+        'end_date':getEndDate(),
+        'user_id':TimesheetService.getUserID()
+    }
+    timeSheets.value = await TimesheetService.getTimesheets(params)
     timeSheets.value = timeSheets.value['projects']
     loading.value = false;
 });
-
+const getStartDate=(date=getTodayDate())=>{
+    return dayjs(date).startOf("month").format('DD/MMM/YYYY')
+}
+const getEndDate=(date=getTodayDate())=>{
+    return dayjs(date).endOf("month").format('DD/MMM/YYYY')
+}
 const listProjects = async () =>{
     let data = await TimesheetService.getProjects()
     projects.value = data?.projects.map(project => ({
@@ -494,6 +445,18 @@ const listHolidays = async () =>{
         label: holiday.holiday_name,
         value: [holiday.id,holiday.holiday_name]
      }));
+}
+
+const deleteObjectById =(array, id) => {
+  return array.filter(item => item.id !== id);
+}
+
+const deleteTimesheet = async () =>{
+    deleteTimesheetDialog.value = false;
+    console.log(timeSheets.value)
+    timeSheets.value = deleteObjectById(timeSheets.value, timesheetID.value)
+    await TimesheetService.deleteTimesheet({'id':timesheetID.value});
+    toast.add({severity:'success', summary: 'Successful', detail: 'Timesheet Deleted', life: 3000});
 }
 
 const getSeverity = (status) => {
@@ -518,6 +481,26 @@ const getSeverity = (status) => {
     }
 };
 </script>
+<style scope>
+.timesheetStatus{
+    color:rgb(109, 106, 106);
+    border-radius: 6px;
+    font-size: 1rem;
+    font-style: normal;
+    font-weight: 500;
+    padding: 5px 8px 2px;
+}
+.approvalDangerColor{
+    background-color: #eec6c6;
+}
+.approvalSuccessColor{
+    background-color: #c6eee1;
+}
+.approvalWarningColor{
+    background-color: #eeecc6;
+}
+
+</style>
 
 
 

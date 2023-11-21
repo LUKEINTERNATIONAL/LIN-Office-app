@@ -13,7 +13,7 @@ const logoUrl = computed(() => {
     <div class="layout-footer">
         <img src="/public/layout/images/logo.png" alt="Logo" height="20" class="mr-2" />
         Powered by
-        <span class="font-medium ml-2">LIN</span>
+        <span class="font-medium ml-2">LIN (v1.0.0)</span> 
     </div>
 </template>
 <style lang="scss" scoped></style>

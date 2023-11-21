@@ -29,7 +29,7 @@ export class Service {
         return this.jsonResponseHandler(ApiClient.put(url, data));
     }
 
-    static async void(url, reason) {
+    static async deleteJson(url, reason) {
         return this.jsonResponseHandler(ApiClient.remove(url, reason));
     }
 
