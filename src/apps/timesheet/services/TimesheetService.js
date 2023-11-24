@@ -7,8 +7,9 @@ export class TimesheetService extends Service {
     static getHolidays() {
         return this.getJson('holidays/list')
     }
-    static getTimesheets(params = {}) {
-        return this.getJson('timesheets/get',params)
+    static async getTimesheets(params = {}) {
+        const data = await this.getJson('timesheets/get',params)
+        return  data.timesheet
     }
     static createTimesheet(data) {
         return this.postJson('timesheets/create', data)

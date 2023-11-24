@@ -25,6 +25,11 @@ export default [
       component: () => import('@/apps/timesheet/views/ManageProjects.vue')
     },
     {
+      name: "manage_occupations",
+      path: "manage_occupations",
+      component: () => import('@/apps/timesheet/views/ManageOccupations.vue')
+    },
+    {
       name: "timesheet_conf",
       path: "timesheet_conf",
       component: () => import('@/apps/timesheet/views/TimesheetConfigurations.vue')

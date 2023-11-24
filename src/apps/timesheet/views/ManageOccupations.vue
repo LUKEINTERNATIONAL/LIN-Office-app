@@ -5,23 +5,22 @@
                 <Button label="Add Projects" icon="pi pi-plus" severity="info" style="margin-right: 10px;" />
             </template>
         </Toolbar>
-        <DataTable :value="projects" showGridlines tableStyle="min-width: 50rem"
+        <DataTable :value="occupations" showGridlines tableStyle="min-width: 50rem"
         :paginator="true" :rows="10" :filters="filters"
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown" 
         :rowsPerPageOptions="[5,10,25]"
-        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} projects"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} occupations"
         >
         <template #header>
             <div class="flex flex-wrap gap-2 align-items-center justify-content-between">
-                <h4 class="m-0">Manage Projects</h4>
+                <h4 class="m-0">Manage Occupations</h4>
                 <span class="p-input-icon-left">
                     <i class="pi pi-search" />
                     <InputText v-model="filters['global'].value" placeholder="Search..." />
                 </span>
             </div>
         </template>
-            <Column field="project_name" header="Name"></Column>
-            <Column field="status" header="Status"></Column>
+            <Column field="occupation_name" header="Name"></Column>
             <Column field="Action" header="Action">
                 <template #body="slotProps">
                     <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editProduct(slotProps.data)" />
@@ -113,7 +112,7 @@
         <Dialog v-model:visible="deleteProductsDialog" :style="{width: '450px'}" header="Confirm" :modal="true">
             <div class="confirmation-content">
                 <i class="pi pi-exclamation-triangle mr-3" style="font-size: 2rem" />
-                <span v-if="product">Are you sure you want to delete the selected projects?</span>
+                <span v-if="product">Are you sure you want to delete the selected occupations?</span>
             </div>
             <template #footer>
                 <Button label="No" icon="pi pi-times" text @click="deleteProductsDialog = false"/>
@@ -128,7 +127,7 @@ import { ref, onMounted } from 'vue';
 import  ProductService  from '@/service/ProductService';
 import { FilterMatchMode } from 'primevue/api';
 import { useToast } from 'primevue/usetoast';
-import { ProjectService } from '@/apps/timesheet/services/ProjectService';
+import { OccupationService } from '@/apps/timesheet/services/OccupationService';
 
 const toast = useToast();
 const dt = ref();
@@ -137,7 +136,7 @@ const deleteProductDialog = ref(false);
 const deleteProductsDialog = ref(false);
 const product = ref({});
 const selectedProducts = ref();
-const projects = ref();
+const occupations = ref();
 const filters = ref({
     'global': {value: null, matchMode: FilterMatchMode.CONTAINS},
 });
@@ -156,7 +155,7 @@ const saveProduct = () => {
     if (product.value.name.trim()) {
         if (product.value.id) {
             product.value.inventoryStatus = product.value.inventoryStatus.value ? product.value.inventoryStatus.value : product.value.inventoryStatus;
-            projects.value[findIndexById(product.value.id)] = product.value;
+            occupations.value[findIndexById(product.value.id)] = product.value;
             toast.add({severity:'success', summary: 'Successful', detail: 'Product Updated', life: 3000});
         }
         else {
@@ -164,7 +163,7 @@ const saveProduct = () => {
             product.value.code = createId();
             product.value.image = 'product-placeholder.svg';
             product.value.inventoryStatus = product.value.inventoryStatus ? product.value.inventoryStatus.value : 'INSTOCK';
-            projects.value.push(product.value);
+            occupations.value.push(product.value);
             toast.add({severity:'success', summary: 'Successful', detail: 'Product Created', life: 3000});
         }
 
@@ -181,13 +180,13 @@ const confirmDeleteProduct = (prod) => {
     deleteProductDialog.value = true;
 };
 const deleteProduct = () => {
-    projects.value = projects.value.filter(val => val.id !== product.value.id);
+    occupations.value = occupations.value.filter(val => val.id !== product.value.id);
     deleteProductDialog.value = false;
     product.value = {};
     toast.add({severity:'success', summary: 'Successful', detail: 'Product Deleted', life: 3000});
 };
 onMounted( async () => {
-    projects.value = await ProjectService.getProjects()
+    occupations.value = await OccupationService.getOccupations()
 });
 
 

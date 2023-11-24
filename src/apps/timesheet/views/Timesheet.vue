@@ -285,13 +285,21 @@ const openNew = () => {
     }
 };
 const getRageTimesheet = async() => {
-    console.log(dates)
-    const params = {
-        'start_date':getStartDate(),
-        'end_date':getEndDate(),
-        'user_id':TimesheetService.getUserID()
+    if(Array.isArray(dates.value)){
+        const end_date  = dates.value[1] ?  dates.value[1].toISOString() : dates.value[0].toISOString()
+        const params = {
+            'start_date':getStartDate(dates.value[0].toISOString()),
+            'end_date':getEndDate(end_date),
+            'user_id':TimesheetService.getUserID()
+        }
+        timeSheets.value = await TimesheetService.getTimesheets(params)
+        timeSheets.value = timeSheets.value.map(item => {
+        return {
+            ...item,
+            timesheet_date: dayjs(item.timesheet_date).format('DD/MMM/YYYY'),
+        };
+    })
     }
-    timeSheets.value = await TimesheetService.getTimesheets(params)
 };
 const timesheetData = ()=>{
     return   {
@@ -331,7 +339,7 @@ const onCellEditComplete = async (event) => {
     let { newData, index } = event;
     newData.start_time = dateToTime(newData.start_time)
     newData.end_time = dateToTime(newData.end_time)
-    newData.timesheet_date = dayjs(newData.timesheet_date).format('DD/MMM/YYYY')
+    newData.timesheet_date = dayjs(newData.timesheet_date).format('YYYY/MM/DD')
 
     if (Array.isArray(newData.project_name) && newData.project_name.length > 0){
         newData.project_id = newData.project_name[0]
@@ -369,21 +377,13 @@ const onCellEditComplete = async (event) => {
         toast.add({severity:'warn', summary: 'Not saved', detail: 'Please fill in the remaing fields', life: 3000});
     }
 
+    newData.timesheet_date = dayjs(newData.timesheet_date).format('DD/MMM/YYYY')
     timeSheets.value[indexOfObjectToUpdate] = newData;
     
 };
 const getTodayDate = () => {
     return dayjs().format('DD/MMM/YYYY')
 }
-const hideDialog = () => {
-    productDialog.value = false;
-    submitted.value = false;
-};
-
-const editProduct = (prod) => {
-    product.value = {...prod};
-    productDialog.value = true;
-};
 const confirmDeleteTimesheet = (id) => {
     timesheetID.value = id.data['id']
     deleteTimesheetDialog.value = true;
@@ -391,15 +391,6 @@ const confirmDeleteTimesheet = (id) => {
 
 const exportCSV = () => {
     dt.value.exportCSV();
-};
-const confirmDeleteSelected = () => {
-    deleteProductsDialog.value = true;
-};
-const deleteSelectedProducts = () => {
-    products.value = products.value.filter(val => !selectedProducts.value.includes(val));
-    deleteProductsDialog.value = false;
-    selectedProducts.value = null;
-    toast.add({severity:'success', summary: 'Successful', detail: 'Products Deleted', life: 3000});
 };
 
 function timeToMinutes(time) {
@@ -423,14 +414,19 @@ onMounted( async () => {
         'user_id':TimesheetService.getUserID()
     }
     timeSheets.value = await TimesheetService.getTimesheets(params)
-    timeSheets.value = timeSheets.value['projects']
+    timeSheets.value = timeSheets.value.map(item => {
+        return {
+            ...item,
+            timesheet_date: dayjs(item.timesheet_date).format('DD/MMM/YYYY'),
+        };
+    })
     loading.value = false;
 });
 const getStartDate=(date=getTodayDate())=>{
-    return dayjs(date).startOf("month").format('DD/MMM/YYYY')
+    return dayjs(date).startOf("month").format('YYYY/MM/DD')
 }
 const getEndDate=(date=getTodayDate())=>{
-    return dayjs(date).endOf("month").format('DD/MMM/YYYY')
+    return dayjs(date).endOf("month").format('YYYY/MM/DD')
 }
 const listProjects = async () =>{
     let data = await TimesheetService.getProjects()
@@ -456,7 +452,7 @@ const deleteTimesheet = async () =>{
     console.log(timeSheets.value)
     timeSheets.value = deleteObjectById(timeSheets.value, timesheetID.value)
     await TimesheetService.deleteTimesheet({'id':timesheetID.value});
-    toast.add({severity:'success', summary: 'Successful', detail: 'Timesheet Deleted', life: 3000});
+    toast.add({severity:'success', summary: 'Successful', detail: 'Record Deleted', life: 3000});
 }
 
 const getSeverity = (status) => {
