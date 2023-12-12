@@ -279,7 +279,7 @@ const groupDateBtn = () => {
     groupDate.value = sessionStorage.getItem('groupTimesheetDate')
 }
 const openNew = () => {
-    if(timeSheets.value[timeSheets.value.length-1].project_id != "")
+    if(timeSheets.value[timeSheets?.value.length-1]?.project_id != "" || timeSheets.value.length == 0)
     {
         timeSheets.value.push(timesheetData());
     }

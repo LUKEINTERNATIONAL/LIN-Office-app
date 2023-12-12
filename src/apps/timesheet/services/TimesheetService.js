@@ -2,7 +2,7 @@ import { Service } from '@/service/Service';
 
 export class TimesheetService extends Service {
     static async getProjects() {
-        return await this.getJson('projects/list')
+        return await this.getJson('projects/get')
     }
     static getHolidays() {
         return this.getJson('holidays/list')
